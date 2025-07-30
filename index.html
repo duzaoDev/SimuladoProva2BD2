@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Interativo de Banco de Dados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        }
+        .quiz-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .btn-option {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-option:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .loader {
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="quiz-container" class="quiz-container w-full max-w-2xl p-6 sm:p-8 rounded-2xl shadow-2xl">
+        <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6">Quiz Interativo de Banco de Dados</h1>
+        
+        <div id="loader" class="flex justify-center items-center h-64">
+            <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
+        </div>
+
+        <div id="quiz-content" class="hidden">
+            <div id="question-container" class="mb-6">
+                <p id="question-text" class="text-lg sm:text-xl font-semibold text-gray-700"></p>
+            </div>
+            <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- As opções de resposta serão inseridas aqui via JS -->
+            </div>
+            <div id="feedback-container" class="mt-6 text-center">
+                <p id="score-text" class="text-lg font-bold text-gray-800"></p>
+            </div>
+            <div class="mt-6 flex justify-center">
+                <button id="next-button" class="hidden bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-300">
+                    Próxima Pergunta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos da UI
+        const quizContainer = document.getElementById('quiz-container');
+        const loader = document.getElementById('loader');
+        const quizContent = document.getElementById('quiz-content');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const scoreText = document.getElementById('score-text');
+        const nextButton = document.getElementById('next-button');
+
+        // Estado do Quiz
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let questions = [];
+        let isAnswered = false;
+
+        // Contexto para a IA baseado nos arquivos PDF
+        const context = `
+            **Tópicos Principais:**
+            1.  **Bancos de Dados Legados (1960-1980):** Modelo Hierárquico (estrutura de árvore, um-para-muitos, ex: IBM IMS) e Modelo de Rede (estrutura de grafo, muitos-para-muitos, ex: CODASYL, IDMS).
+            2.  **Introdução ao NoSQL:** "Not Only SQL", escalabilidade horizontal vs. vertical, esquema flexível/dinâmico, Teorema CAP (Consistência, Disponibilidade, Tolerância a Partições), modelo BASE (Basically Available, Soft state, Eventual consistency) vs. ACID.
+            3.  **Tipos de NoSQL:** Document Stores (MongoDB, CouchDB; armazena JSON/BSON), Key-Value Stores (Redis, DynamoDB; cache, sessões), Column-Family Stores (Cassandra, HBase; análise de big data), Graph Databases (Neo4j, ArangoDB; redes sociais, fraude).
+            4.  **MongoDB:** Coleções (tabelas), Documentos (linhas), Fields (colunas). MQL (MongoDB Query Language), Aggregation Framework para consultas complexas. Modelagem com dados aninhados (arrays de sub-documentos).
+            5.  **NewSQL:** Combina a escalabilidade horizontal do NoSQL com as garantias ACID do SQL. Arquitetura distribuída com camada SQL, gerenciador de transações distribuídas e mecanismo de consenso (Raft, Paxos). Exemplos: Google Spanner, CockroachDB. Viabilizado por avanços em redes, hardware e algoritmos.
+            6.  **ArangoDB:** Banco de dados multimodelo (Documento, Grafo, Chave-Valor). Linguagem de consulta unificada (AQL). Escalabilidade horizontal. Suporte a transações ACID em nível de documento.
+        `;
+
+        /**
+         * Salva o estado atual do quiz no sessionStorage do navegador.
+         */
+        function saveState() {
+            if (currentQuestionIndex >= questions.length) {
+                sessionStorage.removeItem('quizState');
+                return;
+            }
+            const state = {
+                questions: questions,
+                currentQuestionIndex: currentQuestionIndex,
+                score: score
+            };
+            sessionStorage.setItem('quizState', JSON.stringify(state));
+        }
+
+        /**
+         * Carrega o estado do quiz do sessionStorage, se existir.
+         * @returns {boolean} - Retorna true se um estado foi carregado, false caso contrário.
+         */
+        function loadState() {
+            const savedStateJSON = sessionStorage.getItem('quizState');
+            if (savedStateJSON) {
+                try {
+                    const savedState = JSON.parse(savedStateJSON);
+                    if (savedState.questions && savedState.questions.length > 0 && savedState.currentQuestionIndex < savedState.questions.length) {
+                        questions = savedState.questions;
+                        currentQuestionIndex = savedState.currentQuestionIndex;
+                        score = savedState.score;
+                        
+                        showLoader(false);
+                        updateScoreDisplay();
+                        displayQuestion();
+                        nextButton.onclick = handleNextButton;
+                        return true;
+                    }
+                } catch (e) {
+                    console.error("Falha ao carregar o estado salvo:", e);
+                    sessionStorage.removeItem('quizState');
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Gera um novo conjunto de 10 questões usando a API do Gemini.
+         */
+        async function generateQuiz() {
+            sessionStorage.removeItem('quizState');
+            showLoader(true);
+            const prompt = `
+                Com base no seguinte contexto sobre bancos de dados, gere 10 novas questões de múltipla escolha para um quiz.
+                As questões devem ser únicas e não repetir as questões de ciclos anteriores.
+                O nível de dificuldade deve ser variado.
+                O formato da resposta deve ser um objeto JSON contendo uma única chave "quiz", que é um array de 10 objetos.
+                Cada objeto de questão deve ter:
+                - "question": uma string com a pergunta.
+                - "options": um array de 4 strings com as opções de resposta.
+                - "answer": um número (de 0 a 3) representando o índice da resposta correta no array "options".
+
+                Não inclua nenhuma outra explicação ou texto fora do objeto JSON.
+
+                Contexto:
+                ${context}
+            `;
+
+            try {
+                const apiKey = "AIzaSyDxayPvtPYayHxm0bywRbDeS4L0VM4NpXU"; // A chave da API será injetada pelo ambiente
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                    const jsonText = result.candidates[0].content.parts[0].text;
+                    const parsedData = JSON.parse(jsonText);
+                    questions = parsedData.quiz;
+                    startQuiz();
+                } else {
+                    throw new Error("Resposta da API inválida ou vazia.");
+                }
+
+            } catch (error) {
+                console.error("Erro ao gerar o quiz:", error);
+                quizContent.innerHTML = `<p class="text-center text-red-500">Erro ao carregar o quiz. Por favor, tente recarregar a página.</p>`;
+                showLoader(false);
+                quizContent.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Mostra ou esconde o loader e o conteúdo do quiz.
+         * @param {boolean} isLoading - True para mostrar o loader, false para mostrar o conteúdo.
+         */
+        function showLoader(isLoading) {
+            loader.style.display = isLoading ? 'flex' : 'none';
+            quizContent.classList.toggle('hidden', isLoading);
+        }
+
+        /**
+         * Inicia o quiz, resetando o estado e mostrando a primeira questão.
+         */
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            isAnswered = false;
+            nextButton.textContent = "Próxima Pergunta";
+            nextButton.onclick = handleNextButton;
+            updateScoreDisplay();
+            displayQuestion();
+            saveState();
+        }
+
+        /**
+         * Mostra a questão atual e suas opções na tela.
+         */
+        function displayQuestion() {
+            isAnswered = false;
+            const currentQuestion = questions[currentQuestionIndex];
+            questionText.textContent = `${currentQuestionIndex + 1}. ${currentQuestion.question}`;
+            
+            optionsContainer.innerHTML = '';
+            currentQuestion.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('btn-option', 'w-full', 'p-4', 'text-left', 'bg-white', 'border-2', 'border-blue-200', 'rounded-lg', 'shadow-sm', 'hover:bg-blue-50', 'hover:border-blue-400');
+                button.dataset.index = index;
+                button.onclick = () => selectAnswer(index);
+                optionsContainer.appendChild(button);
+            });
+
+            nextButton.classList.add('hidden');
+        }
+
+        /**
+         * Processa a resposta selecionada pelo usuário.
+         * @param {number} selectedIndex - O índice da opção escolhida.
+         */
+        function selectAnswer(selectedIndex) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const currentQuestion = questions[currentQuestionIndex];
+            const correctIndex = currentQuestion.answer;
+
+            if (selectedIndex === correctIndex) {
+                score++;
+            }
+            
+            showFeedback(correctIndex, selectedIndex);
+            updateScoreDisplay();
+            nextButton.classList.remove('hidden');
+
+            if (currentQuestionIndex === questions.length - 1) {
+                nextButton.textContent = "Ver Resultado Final";
+            }
+            saveState();
+        }
+
+        /**
+         * Mostra o feedback visual (cores) nas opções de resposta.
+         * @param {number} correctIndex - O índice da resposta correta.
+         * @param {number} selectedIndex - O índice da resposta selecionada pelo usuário.
+         */
+        function showFeedback(correctIndex, selectedIndex) {
+            Array.from(optionsContainer.children).forEach((button, index) => {
+                button.disabled = true;
+                if (index === correctIndex) {
+                    button.classList.remove('bg-white', 'border-blue-200');
+                    button.classList.add('bg-green-500', 'border-green-600', 'text-white');
+                } else if (index === selectedIndex) {
+                    button.classList.remove('bg-white', 'border-blue-200');
+                    button.classList.add('bg-red-500', 'border-red-600', 'text-white');
+                }
+            });
+        }
+        
+        /**
+         * Atualiza a exibição da pontuação na tela.
+         */
+        function updateScoreDisplay() {
+            scoreText.textContent = `Pontuação: ${score} / ${questions.length}`;
+        }
+
+        /**
+         * Lida com o clique no botão "Próxima Pergunta" ou "Reiniciar".
+         */
+        function handleNextButton() {
+            currentQuestionIndex++;
+            saveState();
+            if (currentQuestionIndex < questions.length) {
+                displayQuestion();
+            } else {
+                showFinalScore();
+            }
+        }
+
+        /**
+         * Mostra a tela de pontuação final.
+         */
+        function showFinalScore() {
+            questionText.textContent = "Quiz Finalizado!";
+            optionsContainer.innerHTML = `<p class="text-center text-2xl font-bold text-gray-800">Sua pontuação final é ${score} de ${questions.length}.</p>`;
+            scoreText.textContent = "";
+            nextButton.textContent = "Gerar Novo Quiz";
+            nextButton.onclick = generateQuiz;
+            sessionStorage.removeItem('quizState');
+        }
+
+        // Lógica de inicialização da página
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!loadState()) {
+                generateQuiz();
+            }
+        });
+    </script>
+</body>
+</html>
