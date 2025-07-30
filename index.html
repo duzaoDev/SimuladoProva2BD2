@@ -36,7 +36,7 @@
 <body class="flex items-center justify-center min-h-screen p-4">
 
     <div id="quiz-container" class="quiz-container w-full max-w-2xl p-6 sm:p-8 rounded-2xl shadow-2xl">
-        <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6">Quiz Interativo de Banco de Dados</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6">Simulado Interativo de Banco de Dados II (NoSQL e NewSQL)</h1>
         
         <div id="loader" class="flex justify-center items-center h-64">
             <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24"></div>
@@ -140,8 +140,16 @@
             const prompt = `
                 Com base no seguinte contexto sobre bancos de dados, gere 10 novas questões de múltipla escolha para um quiz.
                 As questões devem ser únicas e não repetir as questões de ciclos anteriores.
-                O nível de dificuldade deve ser variado.
+                **Instrução de Dificuldade:** As questões devem ser de dificuldade elevada. Elas devem exigir que o usuário analise cenários, compare trade-offs entre tecnologias (ex: NewSQL vs NoSQL, ArangoDB vs MongoDB) ou combine múltiplos conceitos para chegar à resposta correta. 
+                Evite perguntas de definição simples demais, mas varie o nível de dificuldade entre médio, alto e muito alto.
                 O formato da resposta deve ser um objeto JSON contendo uma única chave "quiz", que é um array de 10 objetos.
+                
+                 **Instrução de Variedade:** Para garantir que cada quiz seja único, varie significativamente o estilo e o formato das perguntas a cada nova geração. Inclua uma mistura de:
+                - Perguntas baseadas em cenários práticos (ex: "Qual banco de dados seria ideal para...").
+                - Comparações diretas de trade-offs.
+                - Perguntas que exijam a identificação de qual tecnologia NÃO se aplica a um determinado problema.
+                - Análise de conceitos teóricos aplicados (ex: como o Teorema CAP impacta uma arquitetura NewSQL).
+                
                 Cada objeto de questão deve ter:
                 - "question": uma string com a pergunta.
                 - "options": um array de 4 strings com as opções de resposta.
