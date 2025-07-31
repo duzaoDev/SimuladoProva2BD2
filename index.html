@@ -9,10 +9,10 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            background: linear-gradient(135deg, #018165, #3bf6e6);
         }
         .quiz-container {
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: rgba(255, 242, 227, 0.89);
             backdrop-filter: blur(10px);
         }
         .btn-option {
@@ -85,6 +85,75 @@
             4.  **MongoDB:** Coleções (tabelas), Documentos (linhas), Fields (colunas). MQL (MongoDB Query Language), Aggregation Framework para consultas complexas. Modelagem com dados aninhados (arrays de sub-documentos).
             5.  **NewSQL:** Combina a escalabilidade horizontal do NoSQL com as garantias ACID do SQL. Arquitetura distribuída com camada SQL, gerenciador de transações distribuídas e mecanismo de consenso (Raft, Paxos). Exemplos: Google Spanner, CockroachDB. Viabilizado por avanços em redes, hardware e algoritmos.
             6.  **ArangoDB:** Banco de dados multimodelo (Documento, Grafo, Chave-Valor). Linguagem de consulta unificada (AQL). Escalabilidade horizontal. Suporte a transações ACID em nível de documento.
+
+            RDBMS Tradicionais
+•	Modelo tabular com esquemas rígidos
+•	ACID  
+o	 Atomicidade: todas as operações são concluídas com sucesso ou nenhuma é;
+o	Consistência: todos os dados do banco são válidos e seguem regras de integridade;
+o	Isolamento: transações concorrentes são executadas de forma isolada, evitando interferências. 
+o	Durabilidade: as alterações são permanentes e resistem a falhas de sistemas;
+•	Escalabilidade: vertical (scale-up), aumenta os recursos de um único servidor;
+•	Vantagens:
+o	Conseguem lidar com dados estruturados e relações bem definidas;
+o	Suporta consultas complexas e relatórios;
+o	Oferece suporte robusto a transações, essencial para integridade de dados;
+o	Vasta base de conhecimento, ferramentas e práticas consolidadas;
+•	Desvantagens:
+o	Escalabilidade vertical consome muitos recursos e limitada pelo hardware;
+o	Dificuldade com dados não estruturados ou semiestruturados;
+o	Modificar um esquema físico é um desafio
+
+NoSQL (Not Only SQL)
+•	Sistemas que não seguem o modelo relacional tradicional;
+•	Permitem modelos de dados flexíveis e não exigem um esquema pré-definido;
+•	Foram projetados para escalar horizontalmente (scale-out), distribuindo os dados em vários servidores (sharding);
+
+•	Tipos de Modelos de Dados
+
+o	Document Stores (Dados em Documentos): Armazenam dados em documentos (JSON, BSON, XML), oferecendo modelos flexíveis para dados semiestruturados. Ex: MongoDB e CouchDB;
+o	Key-Value Stores (Dados em Chave-Valor): Armazenam dados em partes chave-valor, ideais para cache e sessões de usuário pela alta performance. Ex. Redis, DynamoDB.
+o	Column-Family Stores (Colunas Dinâmicas): Armazenam dados em colunas dinâmicas, eficientes para análise de grandes volumes. Ex. Cassandar e HBase.
+o	Graph Databases (Grafos): Armazenam dados como nós e arestas, excelentes para representar relações complexas muitos-para-muitos. Exemplos: Neo4j e ArangoDB;
+o	Multi-model (Multimodelo): Combinam modelos múltiplos de dados em único sistema. Ex. ArangoDB.
+•	Consistência (BASE e Teorema CAP): Frequentemente priorizam disponibilidade e tolerância a partições em detrimento de uma consistência imediata. 
+o	BASE (Basically Available, Soft State, Eventually Consistent): em caso de falhas de rede, o sistema continua disponível, mas os dados podem apresentar inconsistências temporárias;
+o	Teorema CAP (Consistência, Disponibilidade (Availability) e Tolerância a Partições): diz que é impossível garantir consistência, disponibilidade e tolerância a partições simultaneamente em um sistema distribuído.
+o	Os sistemas NoSQL são considerados AP (Disponível e Tolerante a Partições);
+
+•	Vantagens:
+o	Flexibilidade de esquema para lidar com dados não estruturados ou em evolução;
+o	Alta performance e baixa latência;
+o	Escalabilidade horizontal;
+o	Alta disponibilidade e tolerância a falhas;
+•	Desvantagens:
+o	Falta de suporte a joins complexos;
+o	A consistência eventual pode ser um problema para aplicações que exigem alta integridade de dados imediatos;
+o	Menor suporte a transações complexas;
+o	Menor maturidade em termos de ferramentas e comunidades em comparação ao SQL;
+
+NewSQL
+•	Definição: Oferece propriedades ACID completas de um sistema transacional tradicional e ao mesmo tempo oferece escalabilidade horizontal.
+
+•	Arquitetura e características:
+
+o	Escalabilidade: projetados para escalar horizontalmente;
+o	Consistência: mantém a consistência forte (ACID) para todas as transações, inclusive as distribuídas;
+o	Transações distribuídas: suporte nativo para transações que abrangem múltiplos nós;
+o	Mecanismos de consenso: utilizam algoritmos como Paxos ou Raft para garantir consistência entre os nós distribuídos. Ex. Google Spanner (relógios atômicos e GPS);
+o	Tolerância a falhas: apresentam alta tolerância a falhas;
+o	Interface SQL: mantém a interface SQL padrão para consultas e manipulação de dados;
+
+Vantagens:
+o	Combinam consistência e escalabilidade horizontal;
+o	Oferecem alta disponibilidade e distribuição geográfica;
+o	Ideias para OLTP (Online Transaction Processing/Processamento Transacional Conectado) em ambientes de Big Data e alto volume em transações;
+o	Permitem usar a familiaridade do SQL para desenvolvedores;
+•	Desvantagens:
+o	Podem apresentar maior latência para operações de escrita;
+o	Complexidade operacional e tecnológica, exigindo maior conhecimento para configuração e manutenção;
+o	Menor popularidade e ecossistema de ferramentas ainda em desenvolvimento;
+
         `;
 
         /**
@@ -141,15 +210,16 @@
                 Com base no seguinte contexto sobre bancos de dados, gere 10 novas questões de múltipla escolha para um quiz.
                 As questões devem ser únicas e não repetir as questões de ciclos anteriores.
                 **Instrução de Dificuldade:** As questões devem ser de dificuldade elevada. Elas devem exigir que o usuário analise cenários, compare trade-offs entre tecnologias (ex: NewSQL vs NoSQL, ArangoDB vs MongoDB) ou combine múltiplos conceitos para chegar à resposta correta. 
-                Evite perguntas de definição simples demais, mas varie o nível de dificuldade entre médio, alto e muito alto.
-                O formato da resposta deve ser um objeto JSON contendo uma única chave "quiz", que é um array de 10 objetos.
+                Evite perguntas de definição simples demais, mas varie o nível de dificuldade entre baixo, médio e alto de maneira aleatória.
                 
                  **Instrução de Variedade:** Para garantir que cada quiz seja único, varie significativamente o estilo e o formato das perguntas a cada nova geração. Inclua uma mistura de:
                 - Perguntas baseadas em cenários práticos (ex: "Qual banco de dados seria ideal para...").
                 - Comparações diretas de trade-offs.
                 - Perguntas que exijam a identificação de qual tecnologia NÃO se aplica a um determinado problema.
                 - Análise de conceitos teóricos aplicados (ex: como o Teorema CAP impacta uma arquitetura NewSQL).
-                
+
+
+                O formato da resposta deve ser um objeto JSON contendo uma única chave "quiz", que é um array de 10 objetos.
                 Cada objeto de questão deve ter:
                 - "question": uma string com a pergunta.
                 - "options": um array de 5 strings com as opções de resposta.
@@ -236,7 +306,7 @@
             currentQuestion.options.forEach((option, index) => {
                 const button = document.createElement('button');
                 button.textContent = option;
-                button.classList.add('btn-option', 'w-full', 'p-4', 'text-left', 'bg-white', 'border-2', 'border-blue-200', 'rounded-lg', 'shadow-sm', 'hover:bg-blue-50', 'hover:border-blue-400');
+                button.classList.add('btn-option', 'w-full', 'p-5', 'text-left', 'bg-white', 'border-2', 'border-blue-200', 'rounded-lg', 'shadow-sm', 'hover:bg-blue-50', 'hover:border-blue-400');
                 button.dataset.index = index;
                 button.onclick = () => selectAnswer(index);
                 optionsContainer.appendChild(button);
